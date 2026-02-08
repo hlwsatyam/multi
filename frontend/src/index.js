@@ -6,7 +6,8 @@ import reportWebVitals from './reportWebVitals';
  
 import axios from 'axios';
 const root = ReactDOM.createRoot(document.getElementById('root'));
-axios.defaults.baseURL='http://localhost:5000'
+axios.defaults.baseURL='https://api.donatecard.co.in'
+// axios.defaults.baseURL='http://localhost:5000'
 
 
 

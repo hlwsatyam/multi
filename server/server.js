@@ -16,7 +16,7 @@ connectDB();
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  origin: ['http://localhost:3000', 'http://localhost:3001'     , 'https://donatecard.co.in'],
   credentials: true
 }));
 app.use(express.json());
@@ -61,9 +61,11 @@ app.use((err, req, res, next) => {
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
-
+const bcrypt = require('bcryptjs');
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  const s=await bcrypt.hash("1111", 10)
+console.log(s)
   console.log(`Server running on port ${PORT}`);
   console.log(`Uploads directory: ${path.join(__dirname, 'uploads')}`);
 });
