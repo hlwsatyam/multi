@@ -1,16 +1,12 @@
 import axios from 'axios';
 
-const API_URL = axios.defaults.baseURL;
-
-const axiosInstance = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json'
-  }
+// Create axios instance with base URL
+const api = axios.create({
+  baseURL: axios.defaults.baseURL,
 });
 
-// Request interceptor to add token
-axiosInstance.interceptors.request.use(
+// Request interceptor to add auth token
+api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -23,17 +19,17 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Response interceptor
-axiosInstance.interceptors.response.use(
-  (response) => response.data,
+// Response interceptor for error handling
+api.interceptors.response.use(
+  (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
-    return Promise.reject(error.response?.data?.error || 'Something went wrong');
+    return Promise.reject(error);
   }
 );
 
-export default axiosInstance;
+export default api;

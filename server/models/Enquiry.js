@@ -8,37 +8,48 @@ const enquirySchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true
+    lowercase: true
   },
   mobile: {
     type: String,
     required: true
   },
-  reason: {
+  message: {
     type: String,
     required: true
   },
   profilePic: {
-    type: String,
-    required: true
+    type: String
   },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected'],
-    default: 'pending'
+    enum: ['new', 'contacted', 'converted', 'rejected'],
+    default: 'new'
   },
-  generatedCredentials: {
-    username: String,
-    password: String
+  assignedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   },
-  cardGenerated: {
-    type: Boolean,
-    default: false
+  convertedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
+  followUpDate: {
+    type: Date
+  },
+  notes: [{
+    note: String,
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }]
+}, {
+  timestamps: true
 });
 
 module.exports = mongoose.model('Enquiry', enquirySchema);

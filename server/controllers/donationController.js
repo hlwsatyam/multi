@@ -1,172 +1,207 @@
 const Donation = require('../models/Donation');
 const User = require('../models/User');
-const Card = require('../models/Card');
-const qr = require('qr-image');
+const QRCode = require('qrcode');
+const crypto = require('crypto');
 
-// Create donation
+// Create donation request
 exports.createDonation = async (req, res) => {
   try {
-    const { amount, paymentMethod } = req.body;
-    
+    const { amount, paymentMethod = 'qr' } = req.body;
+    const userId = req?.user?._id;
+  
     // Generate transaction ID
-    const transactionId = `TXN${Date.now()}${Math.random().toString(36).substr(2, 9)}`;
+    const transactionId = `TXN${Date.now()}${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
-    // Generate QR code
-    const qrData = JSON.stringify({
-      transactionId,
-      amount,
-      memberId: req.user._id,
-      timestamp: Date.now()
-    });
-
-    const qrCodeBuffer = qr.imageSync(qrData, { type: 'png' });
-    const qrCodeBase64 = qrCodeBuffer.toString('base64');
-
-    const donation = new Donation({
-      member: req.user._id,
+    // Create donation record
+    const donation = await Donation.create({
+      user: userId,
       amount,
       transactionId,
       paymentMethod,
-      qrCode: qrCodeBase64,
       status: 'pending'
     });
 
-    await donation.save();
-
-    // Update user's card with donation reference
-    await Card.findOneAndUpdate(
-      { member: req.user._id },
-      { $push: { donations: donation._id } }
-    );
-
     res.status(201).json({
-      message: 'Donation initiated',
+      success: true,
+      message: 'Donation request created. Please complete the payment.',
       donation: {
         _id: donation._id,
         amount: donation.amount,
         transactionId: donation.transactionId,
-        qrCode: donation.qrCode,
-        status: donation.status
+        status: donation.status,
+        createdAt: donation.createdAt
       }
     });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Get all donations (admin)
-exports.getAllDonations = async (req, res) => {
-  try {
-    const donations = await Donation.find()
-      .populate('member', 'username email')
-      .sort({ createdAt: -1 });
-    
-    res.json(donations);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Get member donations
-exports.getMemberDonations = async (req, res) => {
-  try {
-    const donations = await Donation.find({ member: req.user._id })
-      .sort({ createdAt: -1 });
-
-    const totalDonations = donations.reduce((sum, donation) => {
-      return donation.status === 'completed' ? sum + donation.amount : sum;
-    }, 0);
-
-    const donationCount = donations.filter(d => d.status === 'completed').length;
-    const lastDonation = donations.find(d => d.status === 'completed') || null;
-
-    res.json({
-      donations,
-      totalDonations,
-      donationCount,
-      lastDonation
+    console.error('Create donation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while creating donation'
     });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
   }
 };
 
-// Update donation status
-exports.updateDonationStatus = async (req, res) => {
+// Submit payment proof
+exports.submitPayment = async (req, res) => {
   try {
     const { donationId } = req.params;
-    const { status } = req.body;
+    const { transactionId, upiId, remarks } = req.body;
+ 
+    const donation = await Donation.findById(donationId);
+    if (!donation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Donation not found'
+      });
+    }
 
-    const donation = await Donation.findByIdAndUpdate(
+    if (donation.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized'
+      });
+    }
+
+    const updates = {
+      transactionId: transactionId || donation.transactionId,
+      upiId,
+      remarks
+    };
+
+    if (req.file) {
+      updates.screenshot = req.file.filename;
+    }
+
+    const updatedDonation = await Donation.findByIdAndUpdate(
       donationId,
-      { status },
+      updates,
       { new: true }
-    );
+    ).populate('user', 'username name');
+
+    res.json({
+      success: true,
+      message: 'Payment submitted for verification',
+      donation: updatedDonation
+    });
+
+  } catch (error) {
+    console.error('Submit payment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
+// Get user donations
+exports.getUserDonations = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { status, page = 1, limit = 10 } = req.query;
+
+    const query = { user: userId };
+    if (status) query.status = status;
+
+    const donations = await Donation.find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit))
+      .populate('verifiedBy', 'name');
+
+    const total = await Donation.countDocuments(query);
+
+    // Get user stats
+    const user = await User.findById(userId).select('totalDonations donationCount');
+
+    res.json({
+      success: true,
+      donations,
+      totalDonations: user.totalDonations,
+      donationCount: user.donationCount,
+      total,
+      pages: Math.ceil(total / limit),
+      currentPage: parseInt(page)
+    });
+
+  } catch (error) {
+    console.error('Get donations error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
+// Get donation by ID
+exports.getDonationById = async (req, res) => {
+  try {
+    const { donationId } = req.params;
+
+    const donation = await Donation.findById(donationId)
+      .populate('user', 'username name email mobile membershipNumber')
+      .populate('verifiedBy', 'name');
 
     if (!donation) {
-      return res.status(404).json({ message: 'Donation not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'Donation not found'
+      });
     }
 
     res.json({
-      message: 'Donation status updated',
+      success: true,
       donation
     });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Get donation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 };
 
-// Get donation statistics
-exports.getDonationStats = async (req, res) => {
+// Admin: Verify donation
+exports.verifyDonation = async (req, res) => {
   try {
-    const totalDonations = await Donation.aggregate([
-      { $match: { status: 'completed' } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
+    const { donationId } = req.params;
+    const { status, remarks } = req.body;
 
-    const monthlyStats = await Donation.aggregate([
-      { $match: { status: 'completed' } },
-      {
-        $group: {
-          _id: {
-            year: { $year: '$createdAt' },
-            month: { $month: '$createdAt' }
-          },
-          total: { $sum: '$amount' },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { '_id.year': -1, '_id.month': -1 } }
-    ]);
+    if (!['completed', 'failed'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status'
+      });
+    }
 
-    const topDonors = await Donation.aggregate([
-      { $match: { status: 'completed' } },
-      {
-        $group: {
-          _id: '$member',
-          total: { $sum: '$amount' },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { total: -1 } },
-      { $limit: 10 },
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user'
-        }
-      },
-      { $unwind: '$user' }
-    ]);
+    const donation = await Donation.findById(donationId);
+    if (!donation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Donation not found'
+      });
+    }
+
+    donation.status = status;
+    donation.verifiedBy = req.user._id;
+    donation.verifiedAt = new Date();
+    donation.remarks = remarks;
+
+    await donation.save();
 
     res.json({
-      totalAmount: totalDonations[0]?.total || 0,
-      monthlyStats,
-      topDonors
+      success: true,
+      message: `Donation ${status} successfully`,
+      donation
     });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Verify donation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 };

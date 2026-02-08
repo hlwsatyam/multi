@@ -1,108 +1,159 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
-const nodemailer = require('nodemailer');
 
-const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+// Generate JWT Token
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: '30d'
+  });
 };
 
-// Register user (for admin registration or direct registration)
+// Register new user
 exports.register = async (req, res) => {
   try {
-    const { username, email, password, mobile, role } = req.body;
+    const { name, email, mobile, password } = req.body;
 
     // Check if user exists
-    const existingUser = await User.findOne({ 
-      $or: [{ email }, { username }] 
+    const userExists = await User.findOne({ 
+      $or: [{ email }, { mobile }] 
     });
 
-    if (existingUser) {
-      return res.status(400).json({ 
-        message: 'User with this email or username already exists' 
+    if (userExists) {
+      return res.status(400).json({
+        success: false,
+        message: 'User already exists with this email or mobile'
       });
     }
 
-    const user = new User({
-      username,
+    // Create user
+    const user = await User.create({
+      name,
       email,
-      password,
       mobile,
-      role: role || 'member'
+      password,
+      status: 'active'
     });
-
-    await user.save();
 
     const token = generateToken(user._id);
 
     res.status(201).json({
-      message: 'User registered successfully',
+      success: true,
+      message: 'Registration successful',
+      token,
       user: {
         _id: user._id,
         username: user.username,
+        name: user.name,
         email: user.email,
-        role: user.role
-      },
-      token
+        mobile: user.mobile,
+        role: user.role,
+        profilePic: user.profilePic,
+        membershipNumber: user.membershipNumber
+      }
     });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Registration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during registration'
+    });
   }
 };
 
 // Login user
 exports.login = async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { email, mobile, password } = req.body;
 
-    // Find user by username or email
+    // Find user by email or mobile
     const user = await User.findOne({
-      $or: [{ username }, { email: username }]
+      $or: [
+        { email: email || '' },
+        { mobile: mobile || '' }
+      ]
     });
 
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
     }
 
+    // Check password
     const isPasswordValid = await user.comparePassword(password);
-
     if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
     }
 
-    if (!user.isActive) {
-      return res.status(401).json({ message: 'Account is deactivated' });
+    // Check if user is active
+    if (user.status !== 'active') {
+      return res.status(403).json({
+        success: false,
+        message: 'Account is not active. Please contact admin.'
+      });
     }
+
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
 
     const token = generateToken(user._id);
 
     res.json({
+      success: true,
       message: 'Login successful',
+      token,
       user: {
         _id: user._id,
         username: user.username,
+        name: user.name,
         email: user.email,
+        mobile: user.mobile,
         role: user.role,
         profilePic: user.profilePic,
-        mobile: user.mobile
-      },
-      token
+        membershipNumber: user.membershipNumber,
+        totalDonations: user.totalDonations,
+        donationCount: user.donationCount
+      }
     });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during login'
+    });
   }
 };
 
-// Get current user profile
-exports.getProfile = async (req, res) => {
+// Get current user
+exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id)
-      .select('-password')
-      .populate('enquiryId');
+    const user = await User.findById(req.user._id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
 
-    res.json(user);
+    res.json({
+      success: true,
+      user
+    });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Get user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 };
 
@@ -111,10 +162,9 @@ exports.updateProfile = async (req, res) => {
   try {
     const updates = req.body;
     
-    // Remove fields that shouldn't be updated
-    delete updates.password;
-    delete updates.role;
-    delete updates.username;
+    if (req.file) {
+      updates.profilePic = req.file.filename;
+    }
 
     const user = await User.findByIdAndUpdate(
       req.user._id,
@@ -123,105 +173,16 @@ exports.updateProfile = async (req, res) => {
     ).select('-password');
 
     res.json({
+      success: true,
       message: 'Profile updated successfully',
       user
     });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Change password
-exports.changePassword = async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-    const user = await User.findById(req.user._id);
-
-    const isPasswordValid = await user.comparePassword(currentPassword);
-    if (!isPasswordValid) {
-      return res.status(400).json({ message: 'Current password is incorrect' });
-    }
-
-    user.password = newPassword;
-    await user.save();
-
-    res.json({ message: 'Password changed successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Forgot password
-exports.forgotPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Generate reset token
-    const resetToken = crypto.randomBytes(20).toString('hex');
-    const resetTokenExpiry = Date.now() + 3600000; // 1 hour
-
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpiry = resetTokenExpiry;
-    await user.save();
-
-    // Send email
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
+    console.error('Update profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
-
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-    
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: user.email,
-      subject: 'Password Reset Request - Lifeline Multi Technology',
-      html: `
-        <h2>Password Reset Request</h2>
-        <p>You requested a password reset. Click the link below to reset your password:</p>
-        <a href="${resetUrl}">${resetUrl}</a>
-        <p>This link will expire in 1 hour.</p>
-        <p>If you didn't request this, please ignore this email.</p>
-      `
-    };
-
-    await transporter.sendMail(mailOptions);
-
-    res.json({ message: 'Password reset email sent' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Reset password
-exports.resetPassword = async (req, res) => {
-  try {
-    const { token, newPassword } = req.body;
-
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpiry: { $gt: Date.now() }
-    });
-
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid or expired token' });
-    }
-
-    user.password = newPassword;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpiry = undefined;
-    await user.save();
-
-    res.json({ message: 'Password reset successful' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
   }
 };

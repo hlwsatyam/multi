@@ -13,6 +13,7 @@ import {
 import { Outlet, useNavigate } from 'react-router-dom';
 import { getCurrentUser, logout } from '../services/auth';
 import MemberDashboard from '../components/MemberDashboard';
+import axios from 'axios';
 
 const { Header, Sider, Content } = Layout;
 
@@ -80,7 +81,7 @@ const Member = () => {
         <div className="p-6">
           <div className="flex items-center space-x-3">
             <Avatar 
-              src={user?.profilePic ? `http://localhost:5000/uploads/${user.profilePic}` : null}
+              src={user?.profilePic ? `${axios.defaults.baseURL}/uploads/${user.profilePic}` : null}
               size={40}
               className="border-2 border-lifeline-blue"
             />
@@ -119,7 +120,7 @@ const Member = () => {
             
             <Dropdown overlay={userMenu} placement="bottomRight" arrow>
               <Avatar 
-                src={user?.profilePic ? `http://localhost:5000/uploads/${user.profilePic}` : null}
+                src={user?.profilePic ? `${axios.defaults.baseURL}/uploads/${user.profilePic}` : null}
                 icon={<UserOutlined />}
                 className="cursor-pointer bg-lifeline-blue hover:opacity-80 transition-opacity"
                 size="large"

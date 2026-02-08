@@ -32,7 +32,7 @@ const AdminDashboard = () => {
       key: 'profile',
       render: (pic) => (
         <Avatar 
-          src={`http://localhost:5000/uploads/${pic}`} 
+          src={`${axios.defaults.baseURL}/uploads/${pic}`} 
           size={50}
           className="border-2 border-primary"
         />
@@ -111,7 +111,7 @@ const AdminDashboard = () => {
         <div className="space-y-4">
           <div className="flex items-center space-x-4">
             <Avatar 
-              src={`http://localhost:5000/uploads/${enquiry.profilePic}`} 
+              src={`${axios.defaults.baseURL}/uploads/${enquiry.profilePic}`} 
               size={100}
               className="border-4 border-primary"
             />

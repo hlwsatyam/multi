@@ -5,6 +5,7 @@ import { Avatar, Button } from 'antd';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import toast from 'react-hot-toast';
+import axios from 'axios';
 
 const SinglePremiumCard = ({ user, donations = [] }) => {
   const frontCardRef = useRef();
@@ -123,7 +124,7 @@ const SinglePremiumCard = ({ user, donations = [] }) => {
               {/* User Info */}
               <div className="flex items-center gap-2 mb-4">
                 <Avatar
-                  src={user.profilePic ? `http://localhost:5000/uploads/${user.profilePic}` : null}
+                  src={user.profilePic ? `${axios.defaults.baseURL}/uploads/${user.profilePic}` : null}
                   size={50}
                   className="border border-red-500"
                 />

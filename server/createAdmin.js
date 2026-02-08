@@ -2,36 +2,48 @@ const mongoose = require('mongoose');
 const User = require('./models/User');
 require('dotenv').config();
 
-const createAdmin = async () => {
+async function createAdmin() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
+    // Connect to MongoDB
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
 
-    // Check if admin exists
+    console.log('✅ Connected to MongoDB');
+
+    // Check if admin already exists
     const existingAdmin = await User.findOne({ email: 'admin@lifeline.com' });
     
     if (existingAdmin) {
-      console.log('Admin user already exists');
-      return;
+      console.log('✅ Admin user already exists');
+      process.exit(0);
     }
 
+    // Create admin user
     const admin = new User({
-      username: 'admin',
+      name: 'Administrator',
       email: 'admin@lifeline.com',
-      password: 'Admin@123', // Change this in production
-      mobile: '1234567890',
-      role: 'admin'
+      mobile: '9999999999',
+      password: 'admin123',
+      role: 'admin',
+      username:"1111",
+      status: 'active',
+      isVerified: true
     });
 
     await admin.save();
-    console.log('Admin user created successfully');
-    console.log('Username: admin');
-    console.log('Password: Admin@123');
+    
+    console.log('✅ Admin user created successfully!');
+    console.log('📧 Email: admin@lifeline.com');
+    console.log('🔑 Password: admin123');
+    console.log('⚠️  Please change the password after first login!');
 
+    process.exit(0);
   } catch (error) {
-    console.error('Error creating admin:', error);
-  } finally {
-    await mongoose.disconnect();
+    console.error('❌ Error creating admin:', error);
+    process.exit(1);
   }
-};
+}
 
 createAdmin();

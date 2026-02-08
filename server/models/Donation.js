@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const donationSchema = new mongoose.Schema({
-  member: {
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
@@ -16,18 +16,51 @@ const donationSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['qr', 'card', 'bank'],
+    enum: ['qr', 'upi', 'card', 'netbanking'],
     default: 'qr'
   },
   status: {
     type: String,
-    enum: ['pending', 'completed', 'failed'],
+    enum: ['pending', 'completed', 'failed', 'cancelled'],
     default: 'pending'
   },
-  qrCode: String,
-  createdAt: {
-    type: Date,
-    default: Date.now
+  verifiedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  verifiedAt: {
+    type: Date
+  },
+  qrCode: {
+    type: String
+  },
+  upiId: {
+    type: String
+  },
+  screenshot: {
+    type: String
+  },
+  remarks: {
+    type: String
+  }
+}, {
+  timestamps: true
+});
+
+// Update user's donation stats after successful donation
+donationSchema.post('save', async function(doc) {
+  if (doc.status === 'completed') {
+    try {
+      const User = mongoose.model('User');
+      await User.findByIdAndUpdate(doc.user, {
+        $inc: { 
+          totalDonations: doc.amount,
+          donationCount: 1
+        }
+      });
+    } catch (error) {
+      console.error('Error updating user donation stats:', error);
+    }
   }
 });
 

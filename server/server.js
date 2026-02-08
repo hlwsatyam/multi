@@ -1,71 +1,98 @@
-require('dotenv').config();
 const express = require('express');
+const mongoose = require('mongoose');
 const cors = require('cors');
-const path = require('path');
-const connectDB = require('./config/database');
+const dotenv = require('dotenv');
 const morgan = require('morgan');
-// Import routes
-const authRoutes = require('./routes/auth');
-const enquiryRoutes = require('./routes/enquiries');
-const donationRoutes = require('./routes/donations');
+const path = require('path');
+const fs = require('fs');
+
+dotenv.config();
 
 const app = express();
 
-// Connect to database
-connectDB();
-
 // Middleware
-app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001'     , 'https://donatecard.co.in'],
-  credentials: true
-}));
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(morgan('dev'));
-// Routes
+// 🔍 Custom route logger
+app.use((req, res, next) => {
+  console.log('-----------------------------');
+  console.log(`➡️  ${req.method} ${req.originalUrl}`);
+  
+  if (Object.keys(req.query).length) {
+    console.log('🔎 Query:', req.query);
+  }
+
+  if (Object.keys(req.params).length) {
+    console.log('📌 Params:', req.params);
+  }
+
+  if (req.body && Object.keys(req.body).length) {
+    console.log('📦 Body:', req.body);
+  }
+
+  next();
+});
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Static folder for uploads
+app.use('/uploads', express.static(uploadsDir));
+
+// Database connection
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('✅ MongoDB Connected Successfully'))
+.catch(err => console.error('❌ MongoDB Connection Error:', err));
+
+// Health check route
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Lifeline API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Import and use routes
+const authRoutes = require('./routes/authRoutes');
+const enquiryRoutes = require('./routes/enquiryRoutes');
+const donationRoutes = require('./routes/donationRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+
 app.use('/api/auth', authRoutes);
 app.use('/api/enquiries', enquiryRoutes);
 app.use('/api/donations', donationRoutes);
+app.use('/api/admin', adminRoutes);
 
-// Default route
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Lifeline Multi Technology API',
-    version: '1.0.0'
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found'
   });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  
-  if (err.name === 'ValidationError') {
-    return res.status(400).json({
-      message: 'Validation Error',
-      errors: Object.values(err.errors).map(e => e.message)
-    });
-  }
-
-  if (err.name === 'MulterError') {
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ message: 'File size too large. Maximum 5MB allowed.' });
-    }
-    return res.status(400).json({ message: err.message });
-  }
-
-  res.status(500).json({ 
+  console.error('❌ Server Error:', err.stack);
+  res.status(500).json({
+    success: false,
     message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
   });
 });
-const bcrypt = require('bcryptjs');
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, async () => {
-  const s=await bcrypt.hash("1111", 10)
-console.log(s)
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Uploads directory: ${path.join(__dirname, 'uploads')}`);
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📁 Uploads directory: ${uploadsDir}`);
+  console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
 });

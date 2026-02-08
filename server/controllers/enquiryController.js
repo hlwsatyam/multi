@@ -1,119 +1,166 @@
 const Enquiry = require('../models/Enquiry');
 const User = require('../models/User');
-const Card = require('../models/Card');
-const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 
-// Create new enquiry
+// Create enquiry
 exports.createEnquiry = async (req, res) => {
   try {
-    const { name, email, mobile, reason } = req.body;
-    const profilePic = req.file ? req.file.filename : null;
-
-    if (!profilePic) {
-      return res.status(400).json({ message: 'Profile picture is required' });
-    }
-
-    const enquiry = new Enquiry({
+    const { name, email, mobile, message } = req.body;
+    
+    const enquiryData = {
       name,
       email,
       mobile,
-      reason,
-      profilePic
-    });
-
-    await enquiry.save();
-    res.status(201).json({ message: 'Enquiry submitted successfully', enquiry });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Get all enquiries
-exports.getAllEnquiries = async (req, res) => {
-  try {
-    const enquiries = await Enquiry.find().sort({ createdAt: -1 });
-    res.json(enquiries);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Generate credentials for enquiry
-exports.generateCredentials = async (req, res) => {
-  try {
-    const { enquiryId } = req.params;
-    const enquiry = await Enquiry.findById(enquiryId);
-
-    if (!enquiry) {
-      return res.status(404).json({ message: 'Enquiry not found' });
-    }
-
-    // Generate username and password
-    const username = `LMT${Date.now().toString().slice(-6)}`;
-    const password = crypto.randomBytes(4).toString('hex');
-
-    // Create user
-    const user = new User({
-      username,
-      email: enquiry.email,
-      password,
-      mobile: enquiry.mobile,
-      profilePic: enquiry.profilePic,
-      role: 'member',
-      enquiryId: enquiry._id
-    });
-
-    await user.save();
-
-    // Update enquiry
-    enquiry.generatedCredentials = { username, password };
-    enquiry.status = 'approved';
-    await enquiry.save();
-
-    // Generate card
-    const cardNumber = `CARD${Date.now().toString().slice(-8)}`;
-    const card = new Card({
-      member: user._id,
-      cardNumber,
-      cardHolderName: enquiry.name,
-      expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
-      logo: enquiry.profilePic
-    });
-
-    await card.save();
-
-    // Send email with credentials
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
-
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: enquiry.email,
-      subject: 'Your Lifeline Multi Technology Account Credentials',
-      html: `
-        <h2>Welcome to Lifeline Multi Technology</h2>
-        <p>Your account has been created successfully.</p>
-        <p><strong>Username:</strong> ${username}</p>
-        <p><strong>Password:</strong> ${password}</p>
-        <p>Please login and change your password.</p>
-      `
+      message,
+      status: 'new' 
     };
 
-    await transporter.sendMail(mailOptions);
+    if (req.file) {
+      enquiryData.profilePic = req.file.filename;
+    }
 
-    res.json({ 
-      message: 'Credentials generated successfully', 
-      credentials: { username, password },
-      user,
-      card 
+    const enquiry = await Enquiry.create(enquiryData);
+
+    res.status(201).json({
+      success: true,
+      message: 'Enquiry submitted successfully! Our team will contact you soon.',
+      enquiry
     });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Create enquiry error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while submitting enquiry'
+    });
+  }
+};
+
+// Get all enquiries (admin)
+exports.getAllEnquiries = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 10 } = req.query;
+    
+    const query = {};
+    if (status) query.status = status;
+
+    const enquiries = await Enquiry.find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+
+    const total = await Enquiry.countDocuments(query);
+
+    res.json({
+      success: true,
+      enquiries,
+      total,
+      pages: Math.ceil(total / limit),
+      currentPage: parseInt(page)
+    });
+
+  } catch (error) {
+    console.error('Get enquiries error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
+// Convert enquiry to member
+exports.convertToMember = async (req, res) => {
+  try {
+    const { enquiryId } = req.params;
+    const { generatePassword } = req.body;
+
+    const enquiry = await Enquiry.findById(enquiryId);
+    if (!enquiry) {
+      return res.status(404).json({
+        success: false,
+        message: 'Enquiry not found'
+      });
+    }
+
+    // Check if already converted
+    if (enquiry.convertedTo) {
+      return res.status(400).json({
+        success: false,
+        message: 'Enquiry already converted to member'
+      });
+    }
+
+    // Generate random password
+    const password = generatePassword ? crypto.randomBytes(6).toString('hex') : 'password123';
+    const random12Digit = Math.floor(100000000000 + Math.random() * 900000000000).toString();
+    // Create new user
+    const user = await User.create({
+      name: enquiry.name,
+      email: enquiry.email,
+      mobile: enquiry.mobile,
+      username:random12Digit,
+      password: password,
+      profilePic: enquiry.profilePic,
+      status: 'active'
+    });
+
+    // Update enquiry
+    enquiry.status = 'converted';
+    enquiry.convertedTo = user._id;
+    await enquiry.save();
+
+    res.json({
+      success: true,
+      message: 'Enquiry converted to member successfully',
+      user: {
+        username: user.username,
+        password: password,
+        membershipNumber: user.membershipNumber
+      },
+      enquiry
+    });
+
+  } catch (error) {
+    console.error('Convert enquiry error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
+// Add note to enquiry
+exports.addNote = async (req, res) => {
+  try {
+    const { enquiryId } = req.params;
+    const { note } = req.body;
+
+    const enquiry = await Enquiry.findById(enquiryId);
+    if (!enquiry) {
+      return res.status(404).json({
+        success: false,
+        message: 'Enquiry not found'
+      });
+    }
+
+    enquiry.notes.push({
+      note,
+      createdBy: req.user._id
+    });
+
+    await enquiry.save();
+
+    res.json({
+      success: true,
+      message: 'Note added successfully',
+      enquiry
+    });
+
+  } catch (error) {
+    console.error('Add note error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
   }
 };
