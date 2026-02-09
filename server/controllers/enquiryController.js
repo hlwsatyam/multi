@@ -6,7 +6,7 @@ const crypto = require('crypto');
 exports.createEnquiry = async (req, res) => {
   try {
     const { name, email,address, mobile, message } = req.body;
-    
+    console.log(req.body)
     const enquiryData = {
       name,
       email,
@@ -97,6 +97,7 @@ exports.convertToMember = async (req, res) => {
     const user = await User.create({
       name: enquiry.name,
       email: enquiry.email,
+      address: enquiry.address,
       mobile: enquiry.mobile,
       username:random12Digit,
       password: password,

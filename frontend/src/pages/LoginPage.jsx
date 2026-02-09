@@ -78,7 +78,8 @@ const [s,se]=useState(false)
         formData.append('profilePic', fileList[0]);
       }
 
-      const response = await fetch(`${axios.defaults.baseURL}/api/enquiries/create`, {
+      const response = await fetch(`http://localhost:5900/api/enquiries/create`, {
+      // const response = await fetch(`${axios.defaults.baseURL}/api/enquiries/create`, {
         method: 'POST',
         body: formData,
       });
@@ -378,7 +379,7 @@ const [s,se]=useState(false)
           </Row>
 
           <Form.Item
-            name="email/Adhar"
+            name="email"
             rules={[
               { required: true, message: 'Please input your email!' },
            

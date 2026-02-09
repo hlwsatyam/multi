@@ -527,7 +527,7 @@ console.log(stats)
                   <span className="font-bold">{selectedEnquiry.name}</span>
                 </div>
               </Descriptions.Item>
-              <Descriptions.Item label="Email">
+              <Descriptions.Item label="Email/Adhar">
                 <div className="flex items-center">
                   <MailOutlined className="mr-2" />
                   {selectedEnquiry.email}

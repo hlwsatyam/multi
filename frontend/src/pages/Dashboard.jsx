@@ -205,7 +205,7 @@ const MemberDashboard = () => {
 const downloadCard = async () => {
   try {
     toast.loading('Generating premium card...');
-    
+    console.log(userData)
     // Create separate containers with EXACT card dimensions
     const frontContainer = document.createElement('div');
     frontContainer.style.cssText = `
@@ -825,7 +825,7 @@ const downloadCard = async () => {
                 <Descriptions.Item label="Full Name">
                   {userData?.name}
                 </Descriptions.Item>
-                <Descriptions.Item label="Email">
+                <Descriptions.Item label="Email/Adhar">
                   {userData?.email}
                 </Descriptions.Item>
                 <Descriptions.Item label="Mobile">
