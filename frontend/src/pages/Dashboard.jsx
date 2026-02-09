@@ -299,12 +299,33 @@ const downloadCard = async () => {
                 <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#000' }}>
                   {userData.name || 'User Name'}
                 </div>
-                <div style={{ fontSize: '10px', color: '#666' }}>
+                {/* <div style={{ fontSize: '10px', color: '#666' }}>
                   {user.address || 'Ranchi'}
-                </div>
-                <div style={{ fontSize: '10px', color: '#666' }}>
-                  {user.city || 'Ranchi, Jharkhand'}
-                </div>
+                </div> */}
+
+
+<div
+  style={{
+    fontSize: '10px',
+    color: '#666',
+    maxWidth: '120px',       // apne layout ke hisaab se adjust karo
+    display: '-webkit-box',
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    lineHeight: '14px'
+  }}
+>
+  {user.address || 'Ranchi'}
+</div>
+
+
+
+
+
+
+                
               </div>
             </div>
 
@@ -393,7 +414,7 @@ const downloadCard = async () => {
             {/* Footer */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '9px', color: '#4b5563' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                📞 <span>9234185303</span>
+                📞 <span>3369028755</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 📅 <span>Issued: {new Date().toLocaleDateString('en-IN')}</span>

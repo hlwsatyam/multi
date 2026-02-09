@@ -26,6 +26,6 @@ export const getImageUrl = (path) => {
   if (path.startsWith('http')) return path;
   
   // If it's a local path, prepend with API URL
-  const baseUrl = process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:5000';
+  const baseUrl = process.env.REACT_APP_API_URL?.replace('/api', '') ||axios.defaults.baseURL;
   return `${baseUrl}${path}`;
 };

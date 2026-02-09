@@ -21,6 +21,9 @@ const enquirySchema = new mongoose.Schema({
   profilePic: {
     type: String
   },
+  address: {
+    type: String
+  },
   status: {
     type: String,
     enum: ['new', 'contacted', 'converted', 'rejected'],

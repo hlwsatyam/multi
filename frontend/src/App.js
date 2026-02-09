@@ -10,6 +10,8 @@ import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import AdminPanel from './pages/AdminPanel';
 import ProtectedRoute from './components/ProtectedRoute';
+import Homepage from './pages/Homepage';
+import Service from './pages/Service';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,7 +40,8 @@ function App() {
                   <AdminPanel />
                 </ProtectedRoute>
               } />
-              <Route path="/" element={<Navigate to="/login" />} />
+              <Route path="/" element={<Homepage   />} />
+              <Route path="/service" element={<Service  />} />
             </Routes>
             <Toaster 
               position="top-right"

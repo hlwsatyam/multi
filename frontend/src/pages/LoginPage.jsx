@@ -24,6 +24,7 @@ import {
   MessageOutlined,
   UploadOutlined
 } from '@ant-design/icons';
+import axios from 'axios';
 
 const { Title, Text, Link } = Typography;
 const { TextArea } = Input;
@@ -77,7 +78,7 @@ const [s,se]=useState(false)
         formData.append('profilePic', fileList[0]);
       }
 
-      const response = await fetch('/api/enquiries/create', {
+      const response = await fetch(`${axios.defaults.baseURL}/api/enquiries/create`, {
         method: 'POST',
         body: formData,
       });
@@ -158,7 +159,7 @@ const [s,se]=useState(false)
                     >
                       <Input 
                         prefix={<MailOutlined className="text-gray-400" />} 
-                        placeholder="Email or Mobile Number" 
+                        placeholder="Email or Adhar Number" 
                         className="rounded-lg"
                       />
                     </Form.Item>
@@ -189,14 +190,7 @@ const [s,se]=useState(false)
                       </Button>
                     </Form.Item>
 
-                    <div className="text-center">
-                      <Text type="secondary">
-                        Don't have an account?{' '}
-                        <Link onClick={() => setIsLogin(false)} className="font-semibold text-lifeline-blue hover:text-blue-700">
-                          Register here
-                        </Link>
-                      </Text>
-                    </div>
+                  
                   </Form>
                 ) : (
                   <Form
@@ -384,15 +378,15 @@ const [s,se]=useState(false)
           </Row>
 
           <Form.Item
-            name="email"
+            name="email/Adhar"
             rules={[
               { required: true, message: 'Please input your email!' },
-              { type: 'email', message: 'Please enter valid email!' }
+           
             ]}
           >
             <Input 
               prefix={<MailOutlined className="text-gray-400" />} 
-              placeholder="Email Address" 
+              placeholder="email/Adhar" 
               className="rounded-lg"
             />
           </Form.Item>
@@ -403,6 +397,18 @@ const [s,se]=useState(false)
           >
             <TextArea
               placeholder="Tell us about your enquiry..."
+              rows={4}
+              showCount
+              maxLength={500}
+              className="rounded-lg"
+            />
+          </Form.Item>
+          <Form.Item
+            name="address"
+            rules={[{ required: true, message: 'Please input your address!' }]}
+          >
+            <TextArea
+              placeholder="enter your address"
               rows={4}
               showCount
               maxLength={500}

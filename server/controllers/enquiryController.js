@@ -5,13 +5,13 @@ const crypto = require('crypto');
 // Create enquiry
 exports.createEnquiry = async (req, res) => {
   try {
-    const { name, email, mobile, message } = req.body;
+    const { name, email,address, mobile, message } = req.body;
     
     const enquiryData = {
       name,
       email,
       mobile,
-      message,
+      message,address,
       status: 'new' 
     };
 
