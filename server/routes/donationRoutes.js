@@ -9,7 +9,7 @@ router.post('/create', protect, donationController.createDonation);
 router.get('/my-donations', protect, donationController.getUserDonations);
 router.get('/:donationId', protect, donationController.getDonationById);
 router.put('/:donationId/submit', protect, upload.single('screenshot'), donationController.submitPayment);
-
+router.delete('/delete', donationController.deleteEnq );
 // Admin routes
 router.put('/:donationId/verify', protect, adminOnly, donationController.verifyDonation);
 

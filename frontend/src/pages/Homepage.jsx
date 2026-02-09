@@ -1026,15 +1026,15 @@ const App = () => {
               <ul className="space-y-3 sm:space-y-4 text-gray-300">
                 <li className="flex items-start">
                   <EnvironmentOutlined className="mr-2 mt-1 text-blue-300 flex-shrink-0" />
-                  <span className="text-sm sm:text-base">123 Charity Street, Mumbai, Maharashtra - 400001</span>
+                  <span className="text-sm sm:text-base">H No 3639 Gali No. 93, Near Apex Public School, Sant Nagar, Burari, Delhi-110084</span>
                 </li>
                 <li className="flex items-center">
                   <PhoneOutlined className="mr-2 text-blue-300 flex-shrink-0" />
-                  <span className="text-sm sm:text-base">+91 22 1234 5678</span>
+                  <span className="text-sm sm:text-base">+91 3369028755</span>
                 </li>
                 <li className="flex items-center">
                   <MailOutlined className="mr-2 text-blue-300 flex-shrink-0" />
-                  <span className="text-sm sm:text-base">contact@donatecard.org</span>
+                  <span className="text-sm sm:text-base">contact@donatecard.co.in</span>
                 </li>
               </ul>
             </div>
@@ -1049,7 +1049,7 @@ const App = () => {
             <div className="flex items-center">
               <SafetyOutlined className="text-green-400 mr-2" />
               <span className="text-gray-400 text-sm sm:text-base">
-                Registered under Section 12A & 80G • PAN: AAACD1234F
+                Registered under Section 12A & 80G • Reg: 919/2019/20
               </span>
             </div>
           </div>

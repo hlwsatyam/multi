@@ -67,7 +67,29 @@ exports.getAllEnquiries = async (req, res) => {
     });
   }
 };
+exports.deleteEnq = async (req, res) => {
+  try {
+    const { _id } = req.query;
+    
+ 
+     await Enquiry.findByIdAndDelete(_id)
+   
+ 
 
+    res.json({
+      success: true,
+      message:"deleted",
+    
+    });
+
+  } catch (error) {
+    console.error('Get enquiries error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
 // Convert enquiry to member
 exports.convertToMember = async (req, res) => {
   try {

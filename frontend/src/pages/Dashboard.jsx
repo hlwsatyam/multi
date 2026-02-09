@@ -205,7 +205,7 @@ const MemberDashboard = () => {
 const downloadCard = async () => {
   try {
     toast.loading('Generating premium card...');
-    console.log(userData)
+ 
     // Create separate containers with EXACT card dimensions
     const frontContainer = document.createElement('div');
     frontContainer.style.cssText = `
@@ -299,26 +299,12 @@ const downloadCard = async () => {
                 <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#000' }}>
                   {userData.name || 'User Name'}
                 </div>
-                {/* <div style={{ fontSize: '10px', color: '#666' }}>
-                  {user.address || 'Ranchi'}
-                </div> */}
+                <div style={{ fontSize: '10px', color: '#666' }}>
+                  {userData.address || 'Ranchi'}
+                </div>
 
 
-<div
-  style={{
-    fontSize: '10px',
-    color: '#666',
-    maxWidth: '120px',       // apne layout ke hisaab se adjust karo
-    display: '-webkit-box',
-    WebkitLineClamp: 2,
-    WebkitBoxOrient: 'vertical',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    lineHeight: '14px'
-  }}
->
-  {user.address || 'Ranchi'}
-</div>
+ 
 
 
 

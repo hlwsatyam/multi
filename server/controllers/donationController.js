@@ -41,7 +41,29 @@ exports.createDonation = async (req, res) => {
     });
   }
 };
+exports.deleteEnq = async (req, res) => {
+  try {
+    const { _id } = req.query;
+    
+ 
+     await Donation.findByIdAndDelete(_id)
+   
+ 
 
+    res.json({
+      success: true,
+      message:"deleted",
+    
+    });
+
+  } catch (error) {
+    console.error('Get enquiries error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
 // Submit payment proof
 exports.submitPayment = async (req, res) => {
   try {
